@@ -85,7 +85,7 @@ export default async function BlogSlugPage({
   if (!data) {
     return notFound();
   }
-  const { title, description, image, richText } = data ?? {};
+  const { title, description, image, richText, pokemon } = data ?? {};
 
   return (
     <div className="container mx-auto my-16 px-4 md:px-6">
@@ -96,6 +96,34 @@ export default async function BlogSlugPage({
             <h1 className="mt-2 font-bold text-4xl">{title}</h1>
             <p className="mt-4 text-lg text-muted-foreground">{description}</p>
           </header>
+
+          {/* Pokémon badge — displayed before the main image */}
+          {pokemon?.name && (
+            <div className="mb-6 flex items-center gap-4 rounded-xl border bg-muted/40 px-5 py-3 w-fit">
+              {pokemon.sprite && (
+                <img
+                  alt={pokemon.name}
+                  className="h-16 w-16"
+                  height={64}
+                  src={pokemon.sprite}
+                  style={{ imageRendering: "pixelated" }}
+                  width={64}
+                />
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                  Featured Pokémon
+                </p>
+                <p className="font-semibold capitalize text-lg">{pokemon.name}</p>
+                {pokemon.id && (
+                  <p className="text-sm text-muted-foreground">
+                    #{String(pokemon.id).padStart(3, "0")}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {image && (
             <div className="mb-12">
               <SanityImage

@@ -10,6 +10,7 @@ import {
   PanelBottom,
   PanelBottomIcon,
   Settings2,
+  TagIcon,
   TrendingUpDown,
   User,
 } from "lucide-react";
@@ -124,6 +125,7 @@ export const structure = (
         icon: MessageCircle,
       }),
       createList({ S, type: "author", title: "Authors", icon: User }),
+      createList({ S, type: "category", title: "Categories", icon: TagIcon }),
       createList({
         S,
         type: "redirect",

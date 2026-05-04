@@ -78,6 +78,11 @@ const blogCardFragment = /* groq */ `
   orderRank,
   ${imageFragment},
   publishedAt,
+  "categories": categories[]->{
+    _id,
+    title,
+    "slug": slug.current
+  },
   ${blogAuthorFragment}
 `;
 
@@ -248,6 +253,35 @@ export const queryBlogIndexPageBlogs = defineQuery(`
   }
 `);
 
+export const queryBlogIndexPageBlogsByCategory = defineQuery(`
+  *[_type == "blog" && (seoHideFromLists != true) && $categorySlug in categories[]->slug.current] | order(orderRank asc) [$start...$end]{
+    ${blogCardFragment}
+  }
+`);
+
+export const queryBlogIndexPageBlogsCountByCategory = defineQuery(`
+  count(*[_type == "blog" && (seoHideFromLists != true) && $categorySlug in categories[]->slug.current])
+`);
+
+export const queryBlogIndexPageBlogsByCategories = defineQuery(`
+  *[_type == "blog" && (seoHideFromLists != true) && count((categories[]->slug.current)[@ in $categorySlugs]) > 0] | order(orderRank asc) [$start...$end]{
+    ${blogCardFragment}
+  }
+`);
+
+export const queryBlogIndexPageBlogsCountByCategories = defineQuery(`
+  count(*[_type == "blog" && (seoHideFromLists != true) && count((categories[]->slug.current)[@ in $categorySlugs]) > 0])
+`);
+
+export const queryAllCategories = defineQuery(`
+  *[_type == "category"] | order(title asc) {
+    _id,
+    title,
+    "slug": slug.current,
+    description
+  }
+`);
+
 export const queryAllBlogDataForSearch = defineQuery(`
   *[_type == "blog" && defined(slug.current) && (seoHideFromLists != true)]{
     ${blogCardFragment}
@@ -264,7 +298,17 @@ export const queryBlogSlugPageData = defineQuery(`
     ${blogAuthorFragment},
     ${imageFragment},
     ${richTextFragment},
-    ${pageBuilderFragment}
+    ${pageBuilderFragment},
+    "categories": categories[]->{
+      _id,
+      title,
+      "slug": slug.current
+    },
+    "pokemon": pokemon{
+      id,
+      name,
+      sprite
+    }
   }
 `);
 

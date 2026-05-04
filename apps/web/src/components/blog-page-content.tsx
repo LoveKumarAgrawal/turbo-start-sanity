@@ -4,6 +4,7 @@ import { BlogHeader } from "@/components/blog-card";
 import { BlogPagination } from "@/components/blog-pagination";
 import { BlogSearchResults } from "@/components/blog-search-results";
 import { BlogSection } from "@/components/blog-section";
+import { CategoryFilter } from "@/components/category-filter";
 import { PageBuilder } from "@/components/pagebuilder";
 import { useBlogSearch } from "@/hooks/use-blog-search";
 import type { QueryBlogIndexPageDataResult } from "@/lib/sanity/sanity.types";
@@ -11,16 +12,27 @@ import type { Blog } from "@/types";
 import type { PaginationMetadata } from "@/utils";
 import { SearchInput } from "./blog-search";
 
+type Category = {
+  _id: string;
+  title: string | null;
+  slug: string | null;
+  description?: string | null;
+};
+
 type BlogPageContentProps = {
   indexPageData: NonNullable<QueryBlogIndexPageDataResult>;
   blogs: Blog[];
   paginationMetadata: PaginationMetadata;
+  categories?: Category[];
+  activeCategories?: string[];
 };
 
 export function BlogPageContent({
   indexPageData,
   blogs,
   paginationMetadata,
+  categories = [],
+  activeCategories = [],
 }: BlogPageContentProps) {
   const {
     title,
@@ -33,7 +45,7 @@ export function BlogPageContent({
   } = indexPageData;
 
   const { searchQuery, setSearchQuery, results, isSearching, hasQuery, error } =
-    useBlogSearch();
+    useBlogSearch(activeCategories.join(",") || undefined);
 
   const validFeaturedBlogsCount = featuredBlogsCount
     ? Number.parseInt(featuredBlogsCount, 10)
@@ -59,11 +71,17 @@ export function BlogPageContent({
         <BlogHeader description={description} title={title} />
 
         <SearchInput
-          className="mt-8 mb-12"
+          className="mt-8 mb-4"
           onChange={setSearchQuery}
           onClear={() => setSearchQuery("")}
           placeholder="Search blogs..."
           value={searchQuery}
+        />
+
+        <CategoryFilter
+          activeCategories={activeCategories}
+          categories={categories}
+          className="mb-12"
         />
 
         {hasQuery ? (

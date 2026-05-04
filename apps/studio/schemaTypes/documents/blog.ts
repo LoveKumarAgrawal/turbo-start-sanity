@@ -3,8 +3,10 @@ import {
   orderRankOrdering,
 } from "@sanity/orderable-document-list";
 import { FileTextIcon } from "lucide-react";
-import { defineArrayMember, defineField, defineType } from "sanity";
+import React from "react";
+import { defineArrayMember, defineField, defineType, type ObjectInputProps } from "sanity";
 
+import { PokemonInput } from "@/components/pokemon-input";
 import { documentSlugField, imageWithAltField } from "@/schemaTypes/common";
 import { GROUP, GROUPS } from "@/utils/constant";
 import { ogFields } from "@/utils/og-fields";
@@ -90,6 +92,37 @@ export const blog = defineType({
       description:
         "The date when your blog post will appear to have been published",
       group: GROUP.MAIN_CONTENT,
+    }),
+    defineField({
+      name: "categories",
+      type: "array",
+      title: "Categories",
+      description: "Assign one or more categories to this blog post",
+      group: GROUP.MAIN_CONTENT,
+      of: [
+        {
+          type: "reference",
+          to: [{ type: "category" }],
+          options: { disableNew: false },
+        },
+      ],
+      validation: (Rule) => Rule.unique(),
+    }),
+    defineField({
+      name: "pokemon",
+      title: "Featured Pokémon",
+      type: "object",
+      description:
+        "Select a Pokémon to feature at the top of this blog post. Use the search to find by name.",
+      group: GROUP.MAIN_CONTENT,
+      components: {
+        input: PokemonInput as React.ComponentType<ObjectInputProps>,
+      },
+      fields: [
+        defineField({ name: "id", type: "number", title: "Pokémon ID" }),
+        defineField({ name: "name", type: "string", title: "Pokémon Name" }),
+        defineField({ name: "sprite", type: "url", title: "Sprite URL" }),
+      ],
     }),
     imageWithAltField({
       title: "Image",

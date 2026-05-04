@@ -5,8 +5,11 @@ import { BlogPageContent } from "@/components/blog-page-content";
 import { PageBuilder } from "@/components/pagebuilder";
 import { sanityFetch } from "@/lib/sanity/live";
 import {
+  queryAllCategories,
   queryBlogIndexPageBlogs,
+  queryBlogIndexPageBlogsByCategories,
   queryBlogIndexPageBlogsCount,
+  queryBlogIndexPageBlogsCountByCategories,
   queryBlogIndexPageData,
 } from "@/lib/sanity/query";
 import { getSEOMetadata } from "@/lib/seo";
@@ -21,7 +24,18 @@ async function fetchBlogIndexPageData() {
   return res.data;
 }
 
-async function fetchBlogIndexPageBlogs(start: number, end: number) {
+async function fetchBlogIndexPageBlogs(
+  start: number,
+  end: number,
+  categorySlugs: string[]
+) {
+  if (categorySlugs.length > 0) {
+    const res = await sanityFetch({
+      query: queryBlogIndexPageBlogsByCategories,
+      params: { start, end, categorySlugs },
+    });
+    return res.data;
+  }
   const res = await sanityFetch({
     query: queryBlogIndexPageBlogs,
     params: { start, end },
@@ -29,10 +43,22 @@ async function fetchBlogIndexPageBlogs(start: number, end: number) {
   return res.data;
 }
 
-async function fetchBlogIndexPageBlogsCount() {
+async function fetchBlogIndexPageBlogsCount(categorySlugs: string[]) {
+  if (categorySlugs.length > 0) {
+    const res = await sanityFetch({
+      query: queryBlogIndexPageBlogsCountByCategories,
+      params: { categorySlugs },
+    });
+    return res.data;
+  }
   const res = await sanityFetch({
     query: queryBlogIndexPageBlogsCount,
   });
+  return res.data;
+}
+
+async function fetchAllCategories() {
+  const res = await sanityFetch({ query: queryAllCategories });
   return res.data;
 }
 
@@ -57,19 +83,34 @@ export async function generateMetadata() {
 type BlogPageProps = {
   searchParams: Promise<{
     page?: string;
+    // Next.js gives string for single value, string[] for multiple ?category= params
+    category?: string | string[];
   }>;
 };
 
 export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
-  const { page } = await searchParams;
+  const { page, category } = await searchParams;
   const currentPage = page ? Number(page) : 1;
 
-  // Fetch page data and total count in parallel
-  const [[indexPageData, errIndexPageData], [totalCount, errTotalCount]] =
-    await Promise.all([
-      handleErrors(fetchBlogIndexPageData()),
-      handleErrors(fetchBlogIndexPageBlogsCount()),
-    ]);
+  // Normalise to a string array — handles ?category=a and ?category=a&category=b
+  const categorySlugs: string[] = category
+    ? Array.isArray(category)
+      ? category
+      : [category]
+    : [];
+
+  const isFiltering = categorySlugs.length > 0;
+
+  // Fetch page data, total count, and categories in parallel
+  const [
+    [indexPageData, errIndexPageData],
+    [totalCount, errTotalCount],
+    [categories, errCategories],
+  ] = await Promise.all([
+    handleErrors(fetchBlogIndexPageData()),
+    handleErrors(fetchBlogIndexPageBlogsCount(categorySlugs)),
+    handleErrors(fetchAllCategories()),
+  ]);
 
   if (errIndexPageData || !indexPageData) {
     notFound();
@@ -108,12 +149,16 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
   );
 
   const { start, end } = getBlogPaginationStartEnd(currentPage);
-  const blogStart = currentPage === 1 ? 0 : start + featuredBlogsCount;
+  // Skip featured offset when filtering
+  const blogStart =
+    !isFiltering && currentPage === 1 ? 0 : start + (isFiltering ? 0 : featuredBlogsCount);
   const blogEnd =
-    currentPage === 1 ? end + featuredBlogsCount : end + featuredBlogsCount;
+    !isFiltering && currentPage === 1
+      ? end + featuredBlogsCount
+      : end + (isFiltering ? 0 : featuredBlogsCount);
 
   const [blogs, errBlogs] = await handleErrors(
-    fetchBlogIndexPageBlogs(blogStart, blogEnd)
+    fetchBlogIndexPageBlogs(blogStart, blogEnd, categorySlugs)
   );
 
   if (errBlogs || !blogs) {
@@ -141,7 +186,9 @@ export default async function BlogIndexPage({ searchParams }: BlogPageProps) {
 
   return (
     <BlogPageContent
+      activeCategories={categorySlugs}
       blogs={blogs}
+      categories={errCategories ? [] : (categories ?? [])}
       indexPageData={indexPageData}
       paginationMetadata={paginationMetadata}
     />
