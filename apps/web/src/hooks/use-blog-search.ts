@@ -13,8 +13,11 @@ async function searchBlog(query: string, signal: AbortSignal, categorySlug?: str
   }
 
   const params = new URLSearchParams({ q: query });
+  // categorySlug may be comma-separated (e.g. "design,engineering") — send each as a separate param
   if (categorySlug) {
-    params.set("category", categorySlug);
+    for (const slug of categorySlug.split(",")) {
+      if (slug) params.append("category", slug);
+    }
   }
 
   const response = await fetch(`/api/blog/search?${params.toString()}`, {

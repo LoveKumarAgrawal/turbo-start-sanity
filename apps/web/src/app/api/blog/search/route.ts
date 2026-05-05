@@ -10,7 +10,9 @@ export const revalidate = 60; // 1 minute
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
-  const categorySlug = searchParams.get("category");
+  // Support multiple ?category= params OR a single comma-separated value
+  const categoryParams = searchParams.getAll("category");
+  const categorySlugs = categoryParams.flatMap((c) => c.split(",")).filter(Boolean);
 
   if (!query) {
     return NextResponse.json({ error: "Query is required" }, { status: 400 });
@@ -25,7 +27,10 @@ export async function GET(request: Request) {
       const { algoliasearch } = await import("algoliasearch");
       const algolia = algoliasearch(algoliaAppId, algoliaSearchKey);
 
-      const filters = categorySlug ? `categorySlugs:${categorySlug}` : undefined;
+      // Algolia OR filter: categorySlugs:design OR categorySlugs:engineering
+      const filters = categorySlugs.length > 0
+        ? categorySlugs.map((s) => `categorySlugs:${s}`).join(" OR ")
+        : undefined;
 
       const { hits } = await algolia.searchSingleIndex({
         indexName,
@@ -57,9 +62,9 @@ export async function GET(request: Request) {
   let dataset = data;
 
   // Apply category filter manually for Fuse fallback
-  if (categorySlug) {
+  if (categorySlugs.length > 0) {
     dataset = data.filter((blog: { categories?: Array<{ slug?: string | null }> | null }) =>
-      (blog.categories ?? []).some((c: { slug?: string | null }) => c?.slug === categorySlug)
+      (blog.categories ?? []).some((c: { slug?: string | null }) => categorySlugs.includes(c?.slug ?? ""))
     );
   }
 
