@@ -24,7 +24,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    let body: { _type?: string; slug?: { current?: string } } = {};
+    try {
+      body = await request.json();
+    } catch {
+      // No body or invalid JSON — still revalidate everything
+    }
     const documentType = body?._type as string | undefined;
 
     // Revalidate based on which document type changed
